@@ -1,0 +1,41 @@
+name: Build and Test App
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Setup .NET
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 8.0
+
+      # Restore dependencies
+      - name: Restore dependencies
+        working-directory: backend
+        run: dotnet restore
+
+      # Build the solution
+      - name: Build solution
+        working-directory: backend
+        run: dotnet build --no-restore --configuration Release
+
+      # Run tests
+      - name: Run tests
+        working-directory: backend/src/Tests
+        run: dotnet test --no-build --configuration Release 
