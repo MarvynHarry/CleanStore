@@ -1,0 +1,61 @@
+version: "3.8"
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: mysql_container
+    environment:
+      MYSQL_DATABASE: CleanStoreDb
+      MYSQL_USER: appuser
+      MYSQL_PASSWORD: apppassword
+      MYSQL_ROOT_PASSWORD: rootpassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cleanstore-network
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cleanstore-api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__Default: Server=db;Database=CleanStoreDb;User=appuser;Password=apppassword
+    ports:
+      - "5000:8080"
+    command: >
+      /bin/bash -c "
+      dotnet ef database update --project src/Infrastructure/CleanStore.Infrastructure.csproj --startup-project src/Presentation/CleanStore.Presentation.csproj &&
+      dotnet CleanStore.Presentation.dll"
+    networks:
+      - cleanstore-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cleanstore-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:5000/api
+    depends_on:
+      - api
+    networks:
+      - cleanstore-network
+
+volumes:
+  db_data:
+
+networks:
+  cleanstore-network:
